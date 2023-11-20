@@ -1,50 +1,64 @@
-const axios = require('axios');
+// Profile Settings
+const followersOrFollowing = true ? 'followers' : 'following';
+const githubProfile = 'ThePrimeagen';
+const nameToFilter = null;
 
-const FOLLOWERS_OR_FOLLOWING = true ? 'followers' : 'following';
-const GITHUB_PROFILE = 'ThePrimeagen';
-//High PAGE_LIMIT values can cause 'Error Code 429 too many requests' and greater fetching time.
-const PAGE_LIMIT = 10;
-const USERS = [];
+// High pageLimit values can cause 'Error Code 429 too many requests' and greater fetching time
+const pageLimit = 10;
+const users = [];
 
-//Fetch Github Users
+// Fetch Profile
 (async () => {
-  for (let START_PAGE = 1; START_PAGE <= PAGE_LIMIT; START_PAGE++) {
-    const response = await axios(
-      `https://github.com/${GITHUB_PROFILE}?page=${START_PAGE}&tab=${FOLLOWERS_OR_FOLLOWING}`
-    ).catch(console.error);
+  for (let startPage = 1; startPage < pageLimit; startPage++) {
+    try {
+      const response = await fetch(
+        `https://github.com/${githubProfile}?page=${startPage}&tab=${followersOrFollowing}`
+      );
 
-    const GITHUB_RESPONSE = response.data;
-    const BASE_STRING = 'users/';
-    let LETTER_MATCH_COUNT = 0;
-    let USER = '';
+      const plainHTML = await response.text();
+      const baseString = 'users/';
+      let charMatchCount = 0;
+      let user = '';
 
-    if (GITHUB_RESPONSE) {
-      for (i in GITHUB_RESPONSE) {
-        if (GITHUB_RESPONSE[i] === BASE_STRING[LETTER_MATCH_COUNT]) {
-          USER += GITHUB_RESPONSE[i];
-          LETTER_MATCH_COUNT++;
+      for (const i in plainHTML) {
+        const currentIndex = Number(i);
+        const currentHTMLChar = plainHTML[i];
+        const currentBaseStringChar = baseString[charMatchCount];
+        const isUserMatching = user.length === baseString.length;
+
+        if (currentHTMLChar === currentBaseStringChar) {
+          user += currentHTMLChar;
+          charMatchCount++;
         } else {
-          USER = '';
-          LETTER_MATCH_COUNT = 0;
+          user = '';
+          charMatchCount = 0;
         }
 
-        if (USER.length === BASE_STRING.length) {
-          let USERNAME_START_INDEX = 1;
-          while (GITHUB_RESPONSE[Number(i) + USERNAME_START_INDEX] !== '/') {
-            USER += GITHUB_RESPONSE[Number(i) + USERNAME_START_INDEX];
-            USERNAME_START_INDEX++;
+        if (isUserMatching) {
+          user = '';
+          let userCharCount = 0;
+
+          while (plainHTML[currentIndex + userCharCount] !== '/') {
+            user += plainHTML[currentIndex + userCharCount];
+            userCharCount++;
           }
-          if (!USERS.includes(USER)) USERS.push(USER);
+
+          const isUserValid = !users.includes(user) && user !== githubProfile;
+          if (isUserValid) users.push(user);
         }
       }
+    } catch (error) {
+      console.error(error);
     }
   }
 
-  //All users found within the pages range.
-  console.log(`\nAll Users:\n${USERS.toString().replaceAll(',', '\n')}\n`);
-  //Users found using a name.
+  // All users found within the pages range
+  console.log(`\nAll Users: \n${users.toString().replaceAll(',', '\n')}\n`);
+
+  // All users found using a name
   console.log(
-    `Filtered Users:\n${USERS.filter((user) => user.includes('Insert a name'))
+    `Filtered Users: \n${users
+      .filter((user) => user.toLowerCase().includes(nameToFilter))
       .toString()
       .replaceAll(',', '\n')}`
   );
